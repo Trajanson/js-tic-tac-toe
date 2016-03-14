@@ -3,6 +3,7 @@ var debugCounter = 0;
 ///////////////////////////////////////////////////////////////////////////
 
 var audio = new Audio('sounds/magic-burst.wav');
+var gameOverAudio = new Audio('sounds/youLose.wav');
 
 
 
@@ -43,6 +44,9 @@ const HORIZONTAL_ROW_HEIGHT_AS_PERCENT_OF_GAME_BOARD_SIZE = 3;
 const GAME_PIECE_HEIGHT_AS_PERCENT_OF_GAME_BOARD_SIZE = (100 - (2 * HORIZONTAL_ROW_HEIGHT_AS_PERCENT_OF_GAME_BOARD_SIZE)) / 3;
 const GAME_PIECE_WIDTH_AS_PERCENT_OF_GAME_BOARD_SIZE = (100 - (2 * VERTICAL_COLUMN_WIDTH_AS_PERCENT_OF_GAME_BOARD_SIZE)) / 3;
 
+const NEW_GAME_WIDTH_AS_PERCENT_OF_WRAPPER_SIZE = 40;
+const NEW_GAME_HEIGHT_AS_PERCENT_OF_WRAPPER_SIZE = NEW_GAME_WIDTH_AS_PERCENT_OF_WRAPPER_SIZE * (156/650);
+
 
 // Positions
 const GAME_BOARD_POSITION_PERCENT_FROM_TOP_OF_WRAPPER = 26;
@@ -68,6 +72,10 @@ const SECOND_HORIZONTAL_ROW_POSITION_FROM_BOTTOM_OF_GAME_BOARD = FIRST_HORIZONTA
 
 const FIRST_HORIZONTAL_ROW_POSITION_FROM_LEFT_OF_GAME_BOARD = 0;
 const SECOND_HORIZONTAL_ROW_POSITION_FROM_RIGHT_OF_GAME_BOARD = FIRST_HORIZONTAL_ROW_POSITION_FROM_LEFT_OF_GAME_BOARD;
+
+const NEW_GAME_POSITION_PERCENT_FROM_BOTTOM_OF_WRAPPER = 0;
+const NEW_GAME_POSITION_PERCENT_FROM_LEFT_OF_WRAPPER = 0;
+
 
 const GAME_PIECE_1_POSITION_FROM_LEFT = 0;
 const GAME_PIECE_1_POSITION_FROM_TOP = 0;
@@ -118,6 +126,7 @@ const TITLE_IMAGE_FILE_NAME = 'images/Title.png';
 const TEXT_IMAGE_FILE_NAME = 'images/Text.png';
 const TYPE_1_O = 'images/Scurlock-O.png';
 const TYPE_1_X = 'images/Scurlock-X.png';
+const REPLAY_IMAGE_FILE_NAME = 'images/newGame.png';
 
 
 
@@ -128,6 +137,8 @@ const GAME_BOARD_ID = '#gameBoard' ;
 const TITLE_DIV_ID = '#title';
 const TEXT_DIV_ID = '#text';
 const CREDITS_DIV_ID = '#credits';
+const REPLAY_DIV_ID = '#playAgainRequest';
+
 
 const VERTICAL_BAR_1_ID = "#verticalBar1";
 const VERTICAL_BAR_2_ID = "#verticalBar2";
@@ -193,7 +204,8 @@ function sizeAndFitEverything () {
     // Step 5: Set Credits
     resizeCreditsDivdWithinWrapper ();
     
-    
+    // Step 6: Set Credits
+    resizeTNewGameDivdWithinWrapper ();
     
     
     
@@ -334,7 +346,33 @@ function resizeCreditsDivdWithinWrapper () {
 }
 
 
+function resizeTNewGameDivdWithinWrapper () {
+  // 650px Wide x 156 px Tall
+  var newGameDiv = $(REPLAY_DIV_ID),
+      wrapper = newGameDiv.parent(),
+      parentHeight = wrapper.height(),
+      parentWidth = wrapper.width(),
+      textHeight = parentHeight * (NEW_GAME_HEIGHT_AS_PERCENT_OF_WRAPPER_SIZE / 100),
+      textWidth = parentWidth * (NEW_GAME_WIDTH_AS_PERCENT_OF_WRAPPER_SIZE / 100),
+      textPixelsFromBottom = ((NEW_GAME_POSITION_PERCENT_FROM_BOTTOM_OF_WRAPPER / 100) * parentHeight) + 'px',
+      textPixelsFromLeft = ((NEW_GAME_POSITION_PERCENT_FROM_LEFT_OF_WRAPPER / 100) * parentWidth) + 'px';
+      
+  newGameDiv.height(textHeight);
+  newGameDiv.width(textWidth);
 
+  newGameDiv.css({
+    'background-image': 'url(' + REPLAY_IMAGE_FILE_NAME +')',
+    'background-size': 'contain',
+    'background-repeat': 'no-repeat',
+    position: 'absolute',
+    bottom: textPixelsFromBottom,
+    left: textPixelsFromLeft,
+    'min-height': textHeight + 'px',
+    'min-width': textWidth + 'px',
+    cursor: 'pointer',
+  });
+  
+}
 
 
 
@@ -517,6 +555,16 @@ function setTileToMove  (i, image, gameBoardHeight, gameBoardWidth) {
   
 }
 
+function hideTile(i) {
+  var tileID = window["TILE" + i + "_ID"],
+      tile = $(tileID);
+      tile.css({
+        'background-image': 'initial',
+        cursor: 'pointer',
+      })
+      
+}
+
 
 
 
@@ -645,6 +693,8 @@ function gameEngine(humanType, aiType) {
   this.aiType = aiType;
  
   this.engageTurnEngine = function() {
+  $(REPLAY_DIV_ID).hide();
+    
     var image,
         moveType;
         
@@ -793,12 +843,47 @@ function gameEngine(humanType, aiType) {
   
   this.declareAIVictory = function () {
     console.log("AI Wins!");
+    this.offerNewGame();
   };
   
   this.declareDraw = function () {
     console.log("Oh noes, it's a draw!");
+    this.offerNewGame();
   }; 
  
+ this.offerNewGame = function() {
+   gameOverAudio.play();
+   var replayButton = $(REPLAY_DIV_ID);
+   replayButton.fadeIn(2000);
+   replayButton.one("click", function() { 
+     this.currentGameBoard = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
+     this.clearGameBoard();
+     this.setGamePositions();
+     setTimeout(function() {
+       this.engageTurnEngine();
+     }.bind(this), 100)
+   }.bind(this));
+ };
+ 
+ this.setGamePositions = function() {
+     var randNum = Math.floor(Math.random()*2),
+     humanType,
+     aiType;
+  
+     if (randNum === 1) {
+       humanType = "X";
+       aiType = "O";
+     } else {
+       humanType = "O",
+       aiType    = "X";
+     }   
+ }
+ 
+ this.clearGameBoard = function() {
+   ['1','2','3','4','5','6','7','8','9'].forEach(function(element) {
+     hideTile(element);
+   });
+ }
  
  
  
@@ -881,40 +966,40 @@ function gameEngine(humanType, aiType) {
 
   // Credit for Mini-Max Algorithm to http://neverstopbuilding.com/minimax
   this.engageMiniMax = function (game_board) {
-    console.log("Current Game Board: " + game_board);
+    // console.log("Current Game Board: " + game_board);
     debugCounter++;
-    console.log("DEBUG COUNTER: " + debugCounter);
+    // console.log("DEBUG COUNTER: " + debugCounter);
     // base case
     if (
       this.isMyVictory(game_board, this.humanType) ||
       this.isMyVictory(game_board, this.aiType) ||
       this.isTie(game_board, this.humanType, this.aiType)
       ) {
-      console.log("Returning due to game over!")
+      // console.log("Returning due to game over!")
       return this.scoreInput(game_board, this.aiType, this.humanType, this.calculateTurn(game_board));
     }
     var scores = [],
         moves  = [];
     
     this.getAvailableMoves(game_board).forEach(function (element, index, array) { // Array["1", "3", "9"]
-      console.log("Element in recursion: " + element);
-      console.log("Typeof Element in recursion: " + typeof element);
+      // console.log("Element in recursion: " + element);
+      // console.log("Typeof Element in recursion: " + typeof element);
       
       var move = Number(element) - 1, // 0..8
           possibleGame = game_board.slice(0);
-      console.log(this);
+      // console.log(this);
       if ( this.isTheTurnOfThisAI(possibleGame)  ) {
         possibleGame[move] = this.aiType;
       } else {
         possibleGame[move] = this.humanType;
       }
       var newScores = this.engageMiniMax(possibleGame);
-      console.log("The new scores: " + newScores);
+      // console.log("The new scores: " + newScores);
       if (newScores) {
         scores.push( newScores );
         moves.push(move);
       }
-      console.log("Scores through iteration: " + scores);
+      // console.log("Scores through iteration: " + scores);
     }.bind(this));
     
     
@@ -929,11 +1014,11 @@ function gameEngine(humanType, aiType) {
           
           indexOfScoreMax = scores.indexOf(scoreMax);
           
-      console.log("scores: " + scores);
-      console.log("ScoreMax: " + scoreMax);
-      console.log("indexOfScoreMax: " + indexOfScoreMax);
+      // console.log("scores: " + scores);
+      // console.log("ScoreMax: " + scoreMax);
+      // console.log("indexOfScoreMax: " + indexOfScoreMax);
       this.hardSettingChoice = moves[indexOfScoreMax];
-      console.log("HARD SETTING CHOICE IS: " + this.hardSettingChoice);
+      // console.log("HARD SETTING CHOICE IS: " + this.hardSettingChoice);
       return scores[indexOfScoreMax];
     } else {
       var scoreMin,
@@ -943,11 +1028,11 @@ function gameEngine(humanType, aiType) {
                           } (scores);
           
           indexOfScoreMin = scores.indexOf(scoreMin);
-      console.log("scores: " + scores);
-      console.log("scoreMin: " + scoreMin);
-      console.log("indexOfScoreMin: " + indexOfScoreMax);
+      // console.log("scores: " + scores);
+      // console.log("scoreMin: " + scoreMin);
+      // console.log("indexOfScoreMin: " + indexOfScoreMax);
       this.hardSettingChoice = moves[indexOfScoreMin];
-      console.log("HARD SETTING CHOICE IS: " + this.hardSettingChoice);
+      // console.log("HARD SETTING CHOICE IS: " + this.hardSettingChoice);
       return scores[indexOfScoreMin];      
     }
   };
