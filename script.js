@@ -1,3 +1,7 @@
+// DEBUGGER
+var debugCounter = 0;
+///////////////////////////////////////////////////////////////////////////
+
 var audio = new Audio('sounds/magic-burst.wav');
 
 
@@ -163,7 +167,6 @@ const TILE9_ID = "#tile9";
 
 
 function sizeAndFitEverything () {
-  console.log('heytest!');
   var viewPort = $(window),
       viewPortHeight = viewPort.height(),
       viewPortWidth = viewPort.width(),
@@ -466,7 +469,7 @@ function placeIndividualTile(i, gameBoardHeight, gameBoardWidth) {
         'max-height': tileHeight + 'px',
         'min-width': tileWidth + 'px',
         'max-width': tileWidth + 'px',
-        position: 'absolute',
+        position: 'absolute'
       });
 
       tile.css({
@@ -479,6 +482,7 @@ function placeIndividualTile(i, gameBoardHeight, gameBoardWidth) {
         'min-width': tileWidth + 'px',
         'max-width': tileWidth + 'px',
         position: 'absolute',
+        cursor: 'pointer'
       });  
   
 }
@@ -548,12 +552,7 @@ $(document).ready(function () {
       sizeAndFitEverything();
   });
   
-  // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  $('#gameBoard').click(function () {
-    audio.play();
 
-  });
   playNewGame();
 
 });
@@ -636,90 +635,407 @@ console.log("Available Moves: " + newGame.getAvailableMoves(newGame.currentGameB
 }
 
 
-
-
-
-
-
-function gameEngine (humanType, aiType) {
+function gameEngine(humanType, aiType) {
   this.currentGameBoard = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
   
-  this.humanType = humanType;
+  this.hardSettingChoice;
+  
+  // 'X' or 'O'
+  this.humanType = humanType; 
   this.aiType = aiType;
-  
-  this.turnNumber = 1;
-  
-
-  
-  this.engageTurnEngine = function () {
-    var turnSelection,
-        image,
+ 
+  this.engageTurnEngine = function() {
+    var image,
         moveType;
         
-    if (this.isMyVictory(this.currentGameBoard, this.humanType)) {
-      this.declareHumanVictory ();
-    } else if ( this.isMyVictory(this.currentGameBoard, this.aiType) ) {
-      this.declareAIVictory ();
-    } else if (this.isTie(this.currentGameBoard, this.humanType, this.aiType)) {
-      this.declareDraw ();
-    }
-        
-    if (this.turnNumber % 2 === 1) {
-      if (this.humanType === "X") {
-        turnSelection = this.requestPlayerTurn();
-        moveType = 'X';
-        image = TYPE_1_X;
-      } else {
-        turnSelection = this.requestAITurn();
-        moveType = 'X';
-        image = TYPE_1_X;
-      }
+    if (this.isGameOver() ) {
+      return this.declareGameOver();
     } else {
-      if (this.humanType === "O") {
-        turnSelection =  this.requestPlayerTurn();
-        moveType = 'O';
-        image = TYPE_1_O;
+      if (this.turnNumber() % 2 === 1) {
+        console.log("This was hit on odd turn.");
+        if (this.humanType === "X") {
+          moveType = 'X';
+          image = TYPE_1_X;
+          this.requestPlayerTurn(moveType, image);
+        } else {
+          moveType = 'X';
+          image = TYPE_1_X;
+          this.requestAITurn(moveType, image);
+        }
       } else {
-        turnSelection =  this.requestAITurn();
-        moveType = 'O';
-        image = TYPE_1_O;
+        if (this.humanType === "O") {
+          moveType = 'O';
+          image = TYPE_1_O;        
+          this.requestPlayerTurn(moveType, image);
+        } else {
+          moveType = 'O';
+          image = TYPE_1_O;        
+          this.requestAITurn(moveType, image);
+        }
       }
     }
-    setTileToMove(turnSelection, image);
-    this.currentGameBoard[ Number(turnSelection) -1] = moveType;
-    this.turnNumber++;
+    
+  } ;
+  
+  
+  this.requestPlayerTurn = function(moveType, image) {
+    console.log("It's the human's turn!");
+    
+    var arrayOfAvailableOptions = this.getAvailableMoves(this.currentGameBoard),
+        gameTileID,
+        selection,
+        clickElements= window["TILE" + arrayOfAvailableOptions[0] + "_ID"],
+        newElement,
+        context = this; 
+
+        console.log(arrayOfAvailableOptions);
+
+        for (var i = 1; i < arrayOfAvailableOptions.length; i++) {
+          newElement = window["TILE" + arrayOfAvailableOptions[i] + "_ID"];
+          clickElements += ", " + (newElement);
+        }
+
+      $( clickElements ).one( "click", function(event) {
+        $(clickElements).off("click");
+        console.log("CLICK EVENT OCCURED");
+        console.log("Turn#: " + context.turnNumber() );
+        selection = $(this).attr( "id" ).match(/\d/)[0];
+        setTileToMove(selection, image);
+        console.log(context.currentGameBoard);
+        context.currentGameBoard[ Number(selection) -1] = moveType;
+        audio.play();
+        $(this).css({'cursor': 'inherit'});
+        
+        context.engageTurnEngine();        
+      });   
+
+
+        
+        
   };
   
-  this.requestPlayerTurn = function () {
-    return this.lookForHumanChoice(
-      this.getAvailableMoves(this.currentGameBoard)
-      );
+  
+  
+  
+  this.placePlayerTurnRequest = function() {
+    
   };
-  
-  
-  this.lookForHumanChoice = function (arrayOfAvailableOptions) {
-    var gameTileID;
-    arrayOfAvailableOptions.forEach(function (element, index) {
-      gameTileID = window["TILE" + element + "_BACKGROUND_ID"];
-      $( gameTileID ).one( "click", function() {
-        return $(this).attr( "id" ).match(/\d/);
-      });      
-    });
-  };
-  
-  
-  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   
-  this.getAvailableMoves = function (gameBoardArray) {
+  this.requestAITurn = function(moveType, image) {
+    console.log("It's the AI's turn!");
+    
+    var selection   = this.engageAIAlgorithm(),
+        handler     = window["TILE" + selection + "_ID"];
+    
+    console.log("AI chooses " + selection);
+    
+    this.currentGameBoard[ Number(selection) -1] = moveType;
+    setTileToMove(selection, image);
+    $(handler).css({'cursor': 'inherit'});
+
+    this.engageTurnEngine();    
+    
+  };
+  
+  this.engageAIAlgorithm = function() {
+    if (this.turnNumber() === 1) {
+      console.log("AI makes first turn!");
+      return String([1,3,7,9][Math.floor(Math.random() * 4)]);
+    } else if (this.turnNumber() === 2) {
+      console.log("AI makes second turn!");
+      return String(this.secondAIMove());
+    }
+    
+    
+    this.engageMiniMax(this.currentGameBoard);
+    var choiceToMake = this.hardSettingChoice + 1;
+    console.log("MiniMax Algorithm chose: " + choiceToMake );
+    
+    return String(choiceToMake);
+  };
+  
+  
+  
+  
+  
+  
+  
+  
+  this.declareGameOver = function() {  
+    if (this.isMyVictory(this.currentGameBoard, this.humanType)) {
+      return this.declareHumanVictory ();
+    } else if ( this.isMyVictory(this.currentGameBoard, this.aiType) ) {
+      return this.declareAIVictory ();
+    } else if (this.isTie(this.currentGameBoard, this.humanType, this.aiType)) {
+      return this.declareDraw ();
+    }          
+  };
+ 
+  this.declareHumanVictory = function () {
+    console.log("Human wins!");  
+  };
+  
+  this.declareAIVictory = function () {
+    console.log("AI Wins!");
+  };
+  
+  this.declareDraw = function () {
+    console.log("Oh noes, it's a draw!");
+  }; 
+ 
+ 
+ 
+ 
+ 
+ // AI TURN MAKING /////////////////////////////////////////////////////////////
+ /////////////////////////////////////////////////////////////////////////////// 
+  this.scoreInput = function (gameBoardArray, myType, otherType, turnNumber) {
+    if ( this.isMyVictory(gameBoardArray, myType) ) {
+      return 100 + turnNumber;
+    } else if ( this.isMyVictory(gameBoardArray, otherType) ) {
+      return -100 + turnNumber;
+    } else if ( this.isTie(gameBoardArray, myType, otherType) ) {
+     return 0 + turnNumber; 
+    } else {return 0;}
+  };
+
+  this.secondAIMove = function () {
+    var openSquares = this.getAvailableMoves(this.currentGameBoard);
+    console.log(openSquares);
+    
+    if (       compareObjects( openSquares, ["1","2","3","4","5","6","7","8"] )  ) {
+      return 5;
+    } else if (compareObjects( openSquares, ["1","2","3","4","5","6","7","9"] )) {
+      return 2;
+    } else if (compareObjects( openSquares, ["1","2","3","4","5","6","8","9"] )) {
+      return 5;
+      
+      
+      
+    } else if (compareObjects( openSquares, ["1","2","3","4","5","7","8","9"] )) {
+      return 3;
+    } else if (compareObjects( openSquares, ["1","2","3","4","6","7","8","9"] )) {
+      return 1;
+    } else if (compareObjects( openSquares, ["1","2","3","5","6","7","8","9"] )) {
+      return 1;
+      
+      
+      
+      
+    } else if (compareObjects( openSquares, ["1","2","4","5","6","7","8","9"] )) {
+      return 5;
+    } else if (compareObjects( openSquares, ["1","3","4","5","6","7","8","9"] )) {
+      return 1;
+    } else if (compareObjects( openSquares, ["2","3","4","5","6","7","8","9"] )) {
+      return 5;
+    }
+    console.log("THERE WAS A MAJOR ERROR IN AI SECOND TURN PICKER")
+  };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  // Credit for Mini-Max Algorithm to http://neverstopbuilding.com/minimax
+  this.engageMiniMax = function (game_board) {
+    console.log("Current Game Board: " + game_board);
+    debugCounter++;
+    console.log("DEBUG COUNTER: " + debugCounter);
+    // base case
+    if (
+      this.isMyVictory(game_board, this.humanType) ||
+      this.isMyVictory(game_board, this.aiType) ||
+      this.isTie(game_board, this.humanType, this.aiType)
+      ) {
+      console.log("Returning due to game over!")
+      return this.scoreInput(game_board, this.aiType, this.humanType, this.calculateTurn(game_board));
+    }
+    var scores = [],
+        moves  = [];
+    
+    this.getAvailableMoves(game_board).forEach(function (element, index, array) { // Array["1", "3", "9"]
+      console.log("Element in recursion: " + element);
+      console.log("Typeof Element in recursion: " + typeof element);
+      
+      var move = Number(element) - 1, // 0..8
+          possibleGame = game_board.slice(0);
+      console.log(this);
+      if ( this.isTheTurnOfThisAI(possibleGame)  ) {
+        possibleGame[move] = this.aiType;
+      } else {
+        possibleGame[move] = this.humanType;
+      }
+      var newScores = this.engageMiniMax(possibleGame);
+      console.log("The new scores: " + newScores);
+      if (newScores) {
+        scores.push( newScores );
+        moves.push(move);
+      }
+      console.log("Scores through iteration: " + scores);
+    }.bind(this));
+    
+    
+    // Min or Max Calculation
+    if ( this.isTheTurnOfThisAI(game_board)  ) {
+      var scoreMax,
+          indexOfScoreMax;
+          
+          scoreMax        = function getMaxOfArray(scores) {
+                            return Math.max.apply(null, scores);
+                          } (scores);
+          
+          indexOfScoreMax = scores.indexOf(scoreMax);
+          
+      console.log("scores: " + scores);
+      console.log("ScoreMax: " + scoreMax);
+      console.log("indexOfScoreMax: " + indexOfScoreMax);
+      this.hardSettingChoice = moves[indexOfScoreMax];
+      console.log("HARD SETTING CHOICE IS: " + this.hardSettingChoice);
+      return scores[indexOfScoreMax];
+    } else {
+      var scoreMin,
+          indexOfScoreMin;
+          scoreMin        = function getMaxOfArray(scores) {
+                            return Math.min.apply(null, scores);
+                          } (scores);
+          
+          indexOfScoreMin = scores.indexOf(scoreMin);
+      console.log("scores: " + scores);
+      console.log("scoreMin: " + scoreMin);
+      console.log("indexOfScoreMin: " + indexOfScoreMax);
+      this.hardSettingChoice = moves[indexOfScoreMin];
+      console.log("HARD SETTING CHOICE IS: " + this.hardSettingChoice);
+      return scores[indexOfScoreMin];      
+    }
+  };
+  
+  this.isTheTurnOfThisAI = function (gameBoardArray) {
+    if ( this.calculateTurn(gameBoardArray) % 2 === 1 ) {
+      if (this.aiType === "X") {
+        return true;
+      } else {
+        return false;
+      }
+    } else {
+      if (this.aiType === "X") {
+        return false;
+      } else {
+        return true;
+      }      
+    }
+  };
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+ // HELPER FUNCTIONS ///////////////////////////////////////////////////////////
+ ///////////////////////////////////////////////////////////////////////////////
+ 
+ // Identifying Turn Number
+  this.calculateTurn = function (gameBoardArray) {
+    var calculatedTurn = 1;
+    for (var i = 0; i < gameBoardArray.length; i++) {
+      if ( gameBoardArray[i] !== String(i+1) ) {
+        calculatedTurn++;
+      }
+    }
+    return calculatedTurn;
+  }; 
+
+
+  this.turnNumber = function () {
+    return this.calculateTurn(this.currentGameBoard);
+  };  
+  
+  
+  
+  
+  // Reading Current Board
+  this.getAvailableMoves = function (gameBoardArray) { // returns Array["1", "3", "9"]
     var output = [];
     for (var i = 0; i < 9; i++) {
-      if( gameBoardArray[i] ===  String(i + 1) ) {output.push(i+1);}
+      if( gameBoardArray[i] ===  String(i + 1) ) {output.push(String(i+1));}
     }
     return output;
   };
   
   
+  
+  
+  
+  // Analyzing Current Board
   this.isGameOver = function () {
     
     //this.currentGameBoard
@@ -731,8 +1047,7 @@ function gameEngine (humanType, aiType) {
     } else {
       return false;
     }
-  }
-  
+  };
   
   this.isMyVictory = function (gameBoardArray, myType) {
     if ( (gameBoardArray[0] === myType && gameBoardArray[1] === myType && gameBoardArray[2] === myType) ||
@@ -746,10 +1061,9 @@ function gameEngine (humanType, aiType) {
          (gameBoardArray[0] === myType && gameBoardArray[4] === myType && gameBoardArray[8] === myType) ||
          (gameBoardArray[2] === myType && gameBoardArray[4] === myType && gameBoardArray[6] === myType)
        ) {
-         console.log("someone won");
       return true;
     } else {return false;}
-  };
+  };  
   
   this.isTie = function (gameBoardArray, firstType, secondType) {
     if (  ( gameBoardArray[0] === firstType || gameBoardArray[0] === secondType ) &&
@@ -767,27 +1081,7 @@ function gameEngine (humanType, aiType) {
       return true;
     } else {return false;}
   };
-  
-  
-  
-  this.requestAITurn = function () {
-    var availableMoves = this.getAvailableMoves(this.currentGameBoard),
-        selection = availableMoves[Math.floor(Math.random() * availableMoves.length)];
-        
-    return selection;
-  };
-  
-  this.declareHumanVictory = function () {
     
-  };
-  
-  this.declareAIVictory = function () {
-    
-  };
-  
-  this.declareDraw = function () {
-    
-  };
   
   
   
@@ -795,4 +1089,96 @@ function gameEngine (humanType, aiType) {
 
 
 
-// Easy Mode
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Utility Functions
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+
+function compareObjects(o, p)
+{
+    var i,
+        keysO = Object.keys(o).sort(),
+        keysP = Object.keys(p).sort();
+    if (keysO.length !== keysP.length)
+        return false;//not the same nr of keys
+    if (keysO.join('') !== keysP.join(''))
+        return false;//different keys
+    for (i=0;i<keysO.length;++i)
+    {
+        if (o[keysO[i]] instanceof Array)
+        {
+            if (!(p[keysO[i]] instanceof Array))
+                return false;
+            //if (compareObjects(o[keysO[i]], p[keysO[i]] === false) return false
+            //would work, too, and perhaps is a better fit, still, this is easy, too
+            if (p[keysO[i]].sort().join('') !== o[keysO[i]].sort().join(''))
+                return false;
+        }
+        else if (o[keysO[i]] instanceof Date)
+        {
+            if (!(p[keysO[i]] instanceof Date))
+                return false;
+            if ((''+o[keysO[i]]) !== (''+p[keysO[i]]))
+                return false;
+        }
+        else if (o[keysO[i]] instanceof Function)
+        {
+            if (!(p[keysO[i]] instanceof Function))
+                return false;
+            //ignore functions, or check them regardless?
+        }
+        else if (o[keysO[i]] instanceof Object)
+        {
+            if (!(p[keysO[i]] instanceof Object))
+                return false;
+            if (o[keysO[i]] === o)
+            {//self reference?
+                if (p[keysO[i]] !== p)
+                    return false;
+            }
+            else if (compareObjects(o[keysO[i]], p[keysO[i]]) === false)
+                return false;//WARNING: does not deal with circular refs other than ^^
+        }
+        if (o[keysO[i]] !== p[keysO[i]])//change !== to != for loose comparison
+            return false;//not the same value
+    }
+    return true;
+}

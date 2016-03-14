@@ -6,6 +6,8 @@ Lessons:
 
 Citations:
 
+// Credit for Mini-Max Algorithm to http://neverstopbuilding.com/minimax
+
 Font: 
       Odinson
       http://www.dafont.com/odinson.font?text=Tic-Tac-Toe&back=theme
